@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" fill="#07130F"/>
+  <rect x="100" y="100" width="1000" height="430" rx="24" fill="#0F1E16" stroke="#10B981" stroke-opacity="0.2" stroke-width="1"/>
+  <text x="350" y="290" text-anchor="middle" font-family="Inter, sans-serif" font-size="72" font-weight="700" fill="#EF4444" opacity="0.6">5x</text>
+  <path d="M480 300L560 300" stroke="#10B981" stroke-width="4" stroke-linecap="round"/>
+  <polygon points="570,290 590,300 570,310" fill="#10B981"/>
+  <text x="750" y="290" text-anchor="middle" font-family="Inter, sans-serif" font-size="72" font-weight="700" fill="#10B981">1x</text>
+  <text x="350" y="340" text-anchor="middle" font-family="Inter, sans-serif" font-size="16" fill="#71717A">revision cycles</text>
+  <text x="750" y="340" text-anchor="middle" font-family="Inter, sans-serif" font-size="16" fill="#71717A">revision cycle</text>
+  <text x="600" y="440" text-anchor="middle" font-family="Inter, sans-serif" font-size="16" fill="#71717A">cmschat.ai</text>
+</svg>
