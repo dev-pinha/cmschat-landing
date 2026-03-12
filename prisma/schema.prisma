@@ -1,0 +1,260 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================================
+// AUTH — managed by Supabase Auth, we mirror key fields
+// ============================================================
+
+model Profile {
+  id        String   @id @default(cuid())
+  authId    String   @unique // Supabase auth.users.id
+  email     String   @unique
+  name      String?
+  avatarUrl String?
+
+  // GitHub (from OAuth)
+  githubLogin String?
+  githubId    Int?     @unique
+
+  // Relations
+  orgMemberships OrgMember[]
+  chatSessions   ChatSession[]
+  tokenUsages    TokenUsage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("profiles")
+}
+
+// ============================================================
+// ORGANIZATIONS & TEAMS
+// ============================================================
+
+model Organization {
+  id   String @id @default(cuid())
+  name String
+  slug String @unique
+
+  // Billing
+  stripeCustomerId     String? @unique
+  stripeSubscriptionId String?
+  plan                 String  @default("pro")
+  tokenAllowance       Int     @default(5000000)
+
+  // Relations
+  members OrgMember[]
+  sites   Site[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("organizations")
+}
+
+model OrgMember {
+  id        String  @id @default(cuid())
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  role      OrgRole @default(MEMBER)
+
+  // Per-user site permissions
+  sitePermissions Json?
+
+  createdAt DateTime @default(now())
+
+  @@unique([profileId, orgId])
+  @@index([orgId])
+  @@map("org_members")
+}
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+// ============================================================
+// SITES (connected repos)
+// ============================================================
+
+model Site {
+  id    String @id @default(cuid())
+  orgId String
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  name String
+
+  // GitHub connection
+  githubInstallationId Int?
+  githubOwner          String
+  githubRepo           String
+  githubDefaultBranch  String @default("main")
+
+  // Framework detection
+  framework String?
+
+  // Config (generated + customized)
+  config    Json?
+  configRaw String? @db.Text
+
+  lastScannedAt DateTime?
+  status        SiteStatus @default(PENDING_SCAN)
+
+  // Relations
+  chatSessions  ChatSession[]
+  tokenUsages   TokenUsage[]
+  changeRecords ChangeRecord[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([githubOwner, githubRepo])
+  @@index([orgId])
+  @@index([status])
+  @@map("sites")
+}
+
+enum SiteStatus {
+  PENDING_SCAN
+  SCANNING
+  ACTIVE
+  ERROR
+  SUSPENDED
+}
+
+// ============================================================
+// CHAT & MESSAGES
+// ============================================================
+
+model ChatSession {
+  id        String @id @default(cuid())
+  siteId    String
+  site      Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  title        String?
+  messages     Json
+  messageCount Int       @default(0)
+  lastMessageAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([siteId, updatedAt])
+  @@index([profileId, updatedAt])
+  @@map("chat_sessions")
+}
+
+// ============================================================
+// TOKEN USAGE & BILLING
+// ============================================================
+
+model TokenUsage {
+  id              String @id @default(cuid())
+  siteId          String
+  site            Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  profileId       String
+  profile         Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  promptTokens     Int
+  completionTokens Int
+  totalTokens      Int
+  model            String
+  costCents        Int
+
+  sessionId     String?
+  billingPeriod String // "2026-03"
+
+  createdAt DateTime @default(now())
+
+  @@index([siteId, billingPeriod])
+  @@index([profileId, createdAt])
+  @@index([billingPeriod])
+  @@map("token_usage")
+}
+
+// ============================================================
+// CHANGE HISTORY / AUDIT LOG
+// ============================================================
+
+model ChangeRecord {
+  id        String @id @default(cuid())
+  siteId    String
+  site      Site   @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  profileId String
+
+  tier       Int
+  filePath   String
+  fieldPath  String?
+  changeType String
+
+  oldValue String? @db.Text
+  newValue String? @db.Text
+
+  commitSha  String?
+  branchName String?
+  prNumber   Int?
+  prUrl      String?
+
+  status ChangeStatus @default(APPLIED)
+
+  userMessage String? @db.Text
+  aiSummary   String?
+
+  createdAt  DateTime  @default(now())
+  resolvedAt DateTime?
+
+  @@index([siteId, createdAt])
+  @@index([status])
+  @@index([tier])
+  @@map("change_records")
+}
+
+enum ChangeStatus {
+  APPLIED
+  PENDING_REVIEW
+  APPROVED
+  DISCARDED
+  DEV_QUEUE
+  DEV_COMPLETED
+}
+
+// ============================================================
+// WAITLIST & INVITE CODES
+// ============================================================
+
+model WaitlistEntry {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  company    String?
+  role       String?
+  inviteCode String?
+  source     String?
+  createdAt  DateTime @default(now())
+
+  @@map("waitlist_entries")
+}
+
+model InviteCode {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  maxUses   Int       @default(10)
+  usedCount Int       @default(0)
+  source    String?
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@map("invite_codes")
+}
