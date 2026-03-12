@@ -95,12 +95,20 @@ export default function MarketingPage() {
           <Link href="/" className="text-xl font-bold tracking-tight">
             cmschat<span className="text-emerald-400">.ai</span>
           </Link>
-          <a
-            href="#waitlist"
-            className="rounded-lg bg-white/5 px-5 py-2 text-sm font-medium text-zinc-300 transition hover:bg-white/10 hover:text-white"
-          >
-            Request Access
-          </a>
+          <div className="flex items-center gap-6">
+            <Link
+              href="/blog"
+              className="text-sm font-medium text-zinc-300 transition hover:text-white"
+            >
+              Blog
+            </Link>
+            <a
+              href="#waitlist"
+              className="rounded-lg bg-white/5 px-5 py-2 text-sm font-medium text-zinc-300 transition hover:bg-white/10 hover:text-white"
+            >
+              Request Access
+            </a>
+          </div>
         </div>
       </nav>
 
@@ -330,6 +338,9 @@ export default function MarketingPage() {
             <span className="text-sm font-bold tracking-tight">
               cmschat<span className="text-emerald-400">.ai</span>
             </span>
+            <Link href="/blog" className="text-xs text-zinc-500 hover:text-zinc-300 transition">
+              Blog
+            </Link>
           </div>
         </div>
         <div className="mx-auto mt-6 max-w-6xl text-center md:text-left">
